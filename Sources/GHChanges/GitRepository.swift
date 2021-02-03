@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import Combine
 
 final class GitRepository {
 
@@ -48,19 +47,15 @@ final class GitRepository {
 
     func getPullRequests(
         from refFrom: String,
-        to refTo: String
-    ) throws -> Future<[PullRequest], Never> {
+        to refTo: String,
+        completion: @escaping (Result<[PullRequest], Error>) -> Void
+    ) throws {
 
-        let ids = getPullRequestIdentifiers(from: refFrom, to: refTo)
-        print("Pull request's ids:", ids)
-
-        // TODO: prごとにlabelを収集する
-
-        return .init { p in
-            p(.success([]))
-        }
+        fetchPullRequests(
+            identifiers: getPullRequestIdentifiers(from: refFrom, to: refTo),
+            completion: completion
+        )
     }
-
 
     private func getPullRequestIdentifiers(
         from refFrom: String,
@@ -94,5 +89,125 @@ final class GitRepository {
 
         let match = line.matches("#(\\d+)")[1]
         return PullRequest.Identifier(String(match))
+    }
+
+    private func fetchPullRequests(
+        identifiers: [PullRequest.Identifier],
+        completion: @escaping (Result<[PullRequest], Error>) -> Void
+    ) {
+
+        if verbose {
+            print("Pull request's identifiers:", identifiers)
+        }
+
+        var query: String = """
+            {
+                repository(name: "\(name)", owner: "\(owner)") {
+
+            """
+
+        for id in identifiers {
+            query += """
+                    p\(id): pullRequest(number: \(id)) { ...info }
+
+            """
+        }
+
+        query += """
+                }
+            }
+
+            """
+
+        query += """
+            fragment info on PullRequest {
+                number
+                title
+                author { ... on User { login } }
+                labels(first: 100) { nodes { name } }
+                additions
+                deletions
+            }
+            """
+
+        requestGitHub(query: query) { result in
+            switch result {
+            case .success(let data):
+
+                do {
+                    let r = try JSONDecoder().decode(
+                        FetchPullRequestResponse.self,
+                        from: data
+                    )
+
+                    completion(.success(r.pullRequest))
+
+                } catch {
+                    completion(.failure(error))
+                }
+
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    private func requestGitHub(query: String, completion: @escaping (Result<Data, Error>) -> Void) {
+
+        let url = URL(string: "https://api.github.com/graphql")!
+        var request = URLRequest(url: url)
+
+        do {
+            request.httpBody = try JSONSerialization.data(
+                withJSONObject: ["query": query],
+                options: .init()
+            )
+        } catch {
+            completion(.failure(error))
+        }
+
+        request.httpMethod = "POST"
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+        request.addValue("application/json; charaset=utf-8", forHTTPHeaderField: "Content-Type")
+        request.addValue("Bearer \(self.token)", forHTTPHeaderField: "Authorization")
+
+        let task = URLSession.shared.dataTask(with: request) { data, res, error in
+
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(GHChangesError.undefined))
+                return
+            }
+
+            completion(.success(data))
+        }
+
+        task.resume()
+    }
+
+    private struct FetchPullRequestResponse: Decodable {
+
+        private enum RootKeys: String, CodingKey {
+            case data
+        }
+
+        private enum DataKeys: String, CodingKey {
+            case repository
+        }
+
+        let pullRequest: [PullRequest]
+
+        init(from decoder: Decoder) throws {
+            pullRequest = try decoder
+                .container(keyedBy: RootKeys.self)
+                .nestedContainer(keyedBy: DataKeys.self, forKey: .data)
+                .decode([String: PullRequest].self, forKey: .repository)
+                .map({ $0.value })
+        }
     }
 }

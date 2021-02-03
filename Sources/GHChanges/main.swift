@@ -46,22 +46,24 @@ struct GHChanges: ParsableCommand {
         // This is not a problem as the default branch is protected.
         // In the future, we need to support direct single commit.
 
-        let group = DispatchGroup()
-        group.enter()
+        var result: Result<[PullRequest], Error>!
 
-        let repo = try GitRepository(at: repoDir, token: token, verbose: verbose)
-        _ = try repo
-            .getPullRequests(from: refFrom, to: refTo)
-            .sink(receiveValue: {
-                print("🐶", $0)
-                group.leave()
-            })
+        getPullRequests: do {
+            let group = DispatchGroup()
+            group.enter()
 
-        print("wait start")
+            try GitRepository(at: repoDir, token: token, verbose: verbose)
+                .getPullRequests(from: refFrom, to: refTo) {
+                    result = $0
+                    group.leave()
+                }
 
-        group.wait()
+            group.wait()
+        }
 
-        print("wait end")
+        let pulls = try result.get()
+        print(pulls)
+
         // TODO: grouping
         // TODO: output to markdown
     }

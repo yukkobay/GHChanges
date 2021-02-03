@@ -10,4 +10,5 @@ import Foundation
 enum GHChangesError: Error {
     case processError(Int32)
     case gitError(String)
+    case undefined
 }
