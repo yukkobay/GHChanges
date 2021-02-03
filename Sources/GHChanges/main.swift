@@ -1,14 +1,16 @@
 import ArgumentParser
+import Combine
+import Foundation
 
 struct GHChanges: ParsableCommand {
     @Option(
-        name: .shortAndLong,
+        name: [.customLong("repo"), .short],
         help: ArgumentHelp(
             "Path to git working directory with remote settings to GitHub",
             valueName: "path/to/dir"
         )
     )
-    var repo: String = "./"
+    var repoDir: String = "./"
 
     @Option(help: "Github API token with a permission for repo:read")
     var token: String = ""
@@ -32,14 +34,34 @@ struct GHChanges: ParsableCommand {
 
         if verbose {
             print("Args")
-            print("  repo:", repo)
+            print("  repo:", repoDir)
             print("  token:", token)
             print("  refFrom:", refFrom)
             print("  refTo:", refTo)
+            print()
         }
 
-        // TODO: merge-commit list -> pr list
-        // TODO: prごとにlabelを収集する
+        // ## Note
+        // Only merge commits are supported.
+        // This is not a problem as the default branch is protected.
+        // In the future, we need to support direct single commit.
+
+        let group = DispatchGroup()
+        group.enter()
+
+        let repo = try GitRepository(at: repoDir, token: token, verbose: verbose)
+        _ = try repo
+            .getPullRequests(from: refFrom, to: refTo)
+            .sink(receiveValue: {
+                print("🐶", $0)
+                group.leave()
+            })
+
+        print("wait start")
+
+        group.wait()
+
+        print("wait end")
         // TODO: grouping
         // TODO: output to markdown
     }
@@ -54,7 +76,7 @@ struct GHChanges: ParsableCommand {
 //        refFrom = "v0.0.0"
         #endif
 
-        if repo.isEmpty {
+        if repoDir.isEmpty {
             throw ValidationError("repo is a reqired option.")
         }
 

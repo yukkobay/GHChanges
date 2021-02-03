@@ -1,8 +1,10 @@
 dev:
 	swift build; swift run
 
-gen:
+open:
 	swift package generate-xcodeproj
+	sleep 2
+	open ./GHChanges.xcodeproj
 
 checkout:
 	swift package update
