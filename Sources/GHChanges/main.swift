@@ -61,8 +61,8 @@ struct GHChanges: ParsableCommand {
             group.wait()
         }
 
-        let pulls = try result.get()
-        print(pulls)
+        let visitor = ChangeVisitor()
+        try result.get().forEach({ visitor.visit(pullRequest: $0) })
 
         // TODO: grouping
         // TODO: output to markdown

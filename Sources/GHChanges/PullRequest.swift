@@ -7,47 +7,31 @@
 
 import Foundation
 
-struct PullRequest: Decodable {
+struct PullRequest {
+
+    private static let prefixOfGroup = "group: "
+    private static let prefixOfTag = "tag: "
 
     typealias Identifier = Int
-
-    struct Label {
-        enum Kind {
-            case group
-            case tag
-            case undefined
-
-            fileprivate var prefix: String {
-                switch self {
-                case .group: return "group: "
-                case .tag: return "tag: "
-                case .undefined: return ""
-                }
-            }
-
-            init(rawValue: String) {
-                if rawValue.hasPrefix(Kind.group.prefix) {
-                    self = .group
-                } else if rawValue.hasPrefix(Kind.tag.prefix) {
-                    self = .tag
-                } else {
-                    self = .undefined
-                }
-            }
-        }
-
-        let kind: Kind
-        let name: String
-    }
 
     let number: Identifier
     let title: String
 
     let author: String
-    let labels: [Label]
+
+    let group: String?
+    let tags: [String]
 
     let additions: Int
     let deletions: Int
+
+    func accept(visitor: ChangeVisitor) {
+        visitor.visit(pullRequest: self)
+    }
+}
+
+// MARK: - <Decodable>
+extension PullRequest: Decodable {
 
     private enum RootKeys: String, CodingKey {
         case number
@@ -63,6 +47,10 @@ struct PullRequest: Decodable {
         case nodes
     }
 
+    private struct _Label: Decodable {
+        let name: String
+    }
+
     init(from decoder: Decoder) throws {
 
         let container = try decoder.container(keyedBy: RootKeys.self)
@@ -74,28 +62,21 @@ struct PullRequest: Decodable {
             .nestedContainer(keyedBy: OtherKeys.self, forKey: .author)
             .decode(String.self, forKey: .login)
 
-        labels = try container
+        let labels = try container
             .nestedContainer(keyedBy: OtherKeys.self, forKey: .labels)
-            .decode([Label].self, forKey: .nodes)
+            .decode([_Label].self, forKey: .nodes)
+            .map({ $0.name })
+
+        group = labels
+            .filter { $0.hasPrefix(Self.prefixOfGroup) }
+            .map { String($0.dropFirst(Self.prefixOfGroup.count)) }
+            .first
+
+        tags = labels
+            .filter { $0.hasPrefix(Self.prefixOfTag) }
+            .map { String($0.dropFirst(Self.prefixOfTag.count)) }
 
         additions = try container.decode(Int.self, forKey: .additions)
         deletions = try container.decode(Int.self, forKey: .deletions)
-    }
-}
-
-extension PullRequest.Label: Decodable {
-
-    private enum Keys: String, CodingKey {
-        case name
-    }
-
-    init(from decoder: Decoder) throws {
-        let rawName = try decoder
-            .container(keyedBy: Keys.self)
-            .decode(String.self, forKey: .name)
-
-        let kind = Kind(rawValue: rawName)
-        self.name = String(rawName.dropFirst(kind.prefix.count))
-        self.kind = kind
     }
 }
