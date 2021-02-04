@@ -21,7 +21,7 @@ struct ChangeNoteGenerator {
                 .append(markdown(forGroup: "Others", pullRequests: summary.notGroupedPRs))
         }
 
-        let body = grouped.joined(separator: "\n\n") + "\n"
+        let body = grouped.joined(separator: "\n\n")
 
         let appendix: String
         if !withAppendix {
@@ -33,7 +33,7 @@ struct ChangeNoteGenerator {
                     return ""
                 }
 
-                return "- 🎉 Most contributed person is @\(mvp.key)! (\(mvp.value) PRs)\n"
+                return "- 🎉 The biggest contributor is @\(mvp.key)! (\(mvp.value) PRs)\n"
             }()
 
             let tagTable: String = {
@@ -56,6 +56,7 @@ struct ChangeNoteGenerator {
             }()
 
             appendix = """
+
 
                 ---
                 ### Appendix

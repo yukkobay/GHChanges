@@ -9,11 +9,10 @@ import Foundation
 
 enum Command: String {
     case git = "/usr/bin/git"
-    case pwd = "/bin/pwd"
 }
 
 @discardableResult
-func execute(_ command: Command, _ arguments: String..., at path: String? = nil, print: Bool = false) throws -> String? {
+func execute(_ command: Command, _ arguments: String..., at path: String? = nil) throws -> String? {
 
     let process = Process()
     let pipe = Pipe()
@@ -26,7 +25,7 @@ func execute(_ command: Command, _ arguments: String..., at path: String? = nil,
         if path.hasPrefix("/") {
             process.currentDirectoryPath = path
         } else {
-            process.currentDirectoryPath += "./\(path)"
+            process.currentDirectoryPath += "/\(path)"
         }
     }
 
@@ -37,10 +36,6 @@ func execute(_ command: Command, _ arguments: String..., at path: String? = nil,
         data: pipe.fileHandleForReading.readDataToEndOfFile(),
         encoding: .utf8
     )
-
-    if let output = output, print {
-        Swift.print(output)
-    }
 
     if process.terminationStatus != 0 {
         throw GHChangesError.processError(process.terminationStatus)
