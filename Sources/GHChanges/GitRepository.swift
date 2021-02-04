@@ -51,10 +51,14 @@ final class GitRepository {
         completion: @escaping (Result<[PullRequest], Error>) -> Void
     ) throws {
 
-        fetchPullRequests(
-            identifiers: getPullRequestIdentifiers(from: refFrom, to: refTo),
-            completion: completion
-        )
+        let ids = getPullRequestIdentifiers(from: refFrom, to: refTo)
+
+        if ids.isEmpty {
+            completion(.success([]))
+            return
+        }
+
+        fetchPullRequests(identifiers: ids, completion: completion)
     }
 
     private func getPullRequestIdentifiers(

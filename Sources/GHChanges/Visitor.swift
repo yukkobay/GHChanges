@@ -9,8 +9,6 @@ import Foundation
 
 struct ChangeSummary: CustomDebugStringConvertible {
 
-    var prCount: Int = 0
-
     var groupedPRs: [String: [PullRequest]] = [:]
     var notGroupedPRs: [PullRequest] = []
 
@@ -19,6 +17,11 @@ struct ChangeSummary: CustomDebugStringConvertible {
 
     var additions: Int = 0
     var deletions: Int = 0
+
+    var numberOfPullRequests: Int {
+        return groupedPRs.reduce(Int(0)) { $0 + $1.value.count }
+            + notGroupedPRs.count
+    }
 
     var debugDescription: String {
 
@@ -36,7 +39,7 @@ struct ChangeSummary: CustomDebugStringConvertible {
 
         return """
             ChangeSummary(
-                prCount: \(prCount)
+                numberOfPullRequests: \(numberOfPullRequests)
                 groupedPRs: [\({
                     groupedPRsText.isEmpty ? "" : "\n\(groupedPRsText)\n    "
                 }())]
@@ -59,8 +62,6 @@ final class ChangeVisitor {
     private(set) var summary: ChangeSummary = .init()
 
     func visit(pullRequest: PullRequest) {
-
-        summary.prCount += 1
 
         if let group = pullRequest.group {
             summary.groupedPRs[group] = summary.groupedPRs[group] ?? []

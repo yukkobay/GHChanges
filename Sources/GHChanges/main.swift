@@ -61,11 +61,22 @@ struct GHChanges: ParsableCommand {
             group.wait()
         }
 
-        let visitor = ChangeVisitor()
-        try result.get().forEach({ visitor.visit(pullRequest: $0) })
+        let pullRequests = try result.get()
 
-        // TODO: grouping
-        // TODO: output to markdown
+        guard !pullRequests.isEmpty else {
+            // TODO: Exit as error
+            return
+        }
+
+        let visitor = ChangeVisitor()
+        pullRequests.forEach({ visitor.visit(pullRequest: $0) })
+
+        let output = ChangeNoteGenerator.make(
+            with: visitor.summary,
+            withAppendix: false
+        )
+
+        print(output)
     }
 
     mutating func validate() throws {
