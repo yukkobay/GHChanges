@@ -6,6 +6,9 @@ import PackageDescription
 let package = Package(
     name: "GHChanges",
     platforms: [.macOS(.v10_15)],
+    products: [
+        .executable(name: "gh-changes", targets: ["GHChanges"])
+    ],
     dependencies: [
         .package(
             url: "https://github.com/apple/swift-argument-parser",

@@ -14,13 +14,10 @@ final class GitRepository {
     private let name: String
     private let token: String
 
-    private let verbose: Bool
-
-    init(at path: String, token: String, verbose: Bool) throws {
+    init(at path: String, token: String) throws {
 
         self.path = path
         self.token = token
-        self.verbose = verbose
 
         guard let remoteInfo = try? execute(.git, "remote", "-v", at: path),
               !remoteInfo.isEmpty else
@@ -35,14 +32,6 @@ final class GitRepository {
 
         owner = extracted[1]
         name = extracted[2]
-
-        if verbose {
-            print("Found a git repository.")
-            print("  path:", path)
-            print("  owner:", owner)
-            print("  name:", name)
-            print()
-        }
     }
 
     func getPullRequests(
@@ -99,10 +88,6 @@ final class GitRepository {
         identifiers: [PullRequest.Identifier],
         completion: @escaping (Result<[PullRequest], Error>) -> Void
     ) {
-
-        if verbose {
-            print("Pull request's identifiers:", identifiers)
-        }
 
         var query: String = """
             {

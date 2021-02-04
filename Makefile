@@ -1,6 +1,9 @@
 dev:
 	swift build; swift run
 
+build:
+	swift build -c release
+
 open:
 	swift package generate-xcodeproj
 	sleep 2

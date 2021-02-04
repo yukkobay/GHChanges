@@ -6,8 +6,8 @@ struct GHChanges: ParsableCommand {
     @Option(
         name: [.customLong("repo"), .short],
         help: ArgumentHelp(
-            "Path to git working directory with remote settings to GitHub",
-            valueName: "path/to/dir"
+            "Path to git working directory with GitHub set in remote.",
+            valueName: "path"
         )
     )
     var repoDir: String = "./"
@@ -17,7 +17,10 @@ struct GHChanges: ParsableCommand {
 
     @Option(
         name: .customLong("from"),
-        help: ArgumentHelp("Git ref at start. Generally use a latest release tag", valueName: "ref")
+        help: ArgumentHelp(
+            "Git reference at start. Generally set a latest release tag",
+            valueName: "ref"
+        )
     )
     var refFrom: String = ""
 
@@ -27,19 +30,10 @@ struct GHChanges: ParsableCommand {
     )
     var refTo: String = "HEAD"
 
-    @Flag(name: .shortAndLong, help: "Print status updates while counting.")
-    var verbose: Bool = false
+    @Flag(name: [.long, .customShort("a")], help: "Append more information.")
+    var withAppendix: Bool = false
 
     mutating func run() throws {
-
-        if verbose {
-            print("Args")
-            print("  repo:", repoDir)
-            print("  token:", token)
-            print("  refFrom:", refFrom)
-            print("  refTo:", refTo)
-            print()
-        }
 
         // ## Note
         // Only merge commits are supported.
@@ -52,7 +46,7 @@ struct GHChanges: ParsableCommand {
             let group = DispatchGroup()
             group.enter()
 
-            try GitRepository(at: repoDir, token: token, verbose: verbose)
+            try GitRepository(at: repoDir, token: token)
                 .getPullRequests(from: refFrom, to: refTo) {
                     result = $0
                     group.leave()
@@ -73,7 +67,7 @@ struct GHChanges: ParsableCommand {
 
         let output = ChangeNoteGenerator.make(
             with: visitor.summary,
-            withAppendix: false
+            withAppendix: withAppendix
         )
 
         print(output)
@@ -81,12 +75,11 @@ struct GHChanges: ParsableCommand {
 
     mutating func validate() throws {
         #if DEBUG
-        verbose = true
-
-        // Use these when debugging
-//        repo = "./SampleGit"
-//        token = "xxx"
-//        refFrom = "v0.0.0"
+//        repoDir = ""
+//        token = ""
+//        refFrom = ""
+//        refTo = ""
+//        withAppendix = true
         #endif
 
         if repoDir.isEmpty {

@@ -21,7 +21,7 @@ struct ChangeNoteGenerator {
                 .append(markdown(forGroup: "Others", pullRequests: summary.notGroupedPRs))
         }
 
-        let body = grouped.joined(separator: "\n\n")
+        let body = grouped.joined(separator: "\n\n") + "\n"
 
         let appendix: String
         if !withAppendix {
@@ -57,7 +57,6 @@ struct ChangeNoteGenerator {
 
             appendix = """
 
-
                 ---
                 ### Appendix
                 - 🔖 Number of PRs: \(summary.numberOfPullRequests)
@@ -66,8 +65,7 @@ struct ChangeNoteGenerator {
                 + Total additions +\(summary.additions)
                 - Todal deletions -\(summary.deletions)
                 ```
-                \(tagTable)
-                """
+                """ + tagTable
         }
 
         return body + appendix
